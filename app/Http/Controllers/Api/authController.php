@@ -51,9 +51,56 @@ class authController extends Controller
                     ->orderByDesc('id')->limit(1)
                     ->value('name');
 
-                    
-              
-                dd($cityName);
+                $oneHourAgo = date('Y-m-d H:i:s', strtotime('-1 hour'));
+
+                $checkRepeat = DB::table('users_temp')
+                    ->where('email', '=', $request->email)
+                    ->where('status', '=', '0')
+                    ->where('deletes', '=', '1')
+                    ->where('created_at', '>=', $oneHourAgo)
+                    ->get();
+
+                if ($checkRepeat->count() > 4) {
+                    $response = ['status' => 'failed', 'message' => 'Try Again After 1 Hour',  'error' => 'Try after some Time'];
+                    goto returnFVI;
+                }
+
+                $randotp = Controller::generateOTP(4);
+
+                $arr = [
+                    'building_name' => ($request->building_name != '' && $request->building_name != 'null') ? $request->building_name : '',
+                    'city' => $cityName,
+                    'name' => $request->first_name,
+                    'email' => $request->email,
+                    'mobile' =>  $request->mobile,
+                    'address' => $stateName,
+                    'nationality' => $countryName,
+                    'pass' => $pass,
+                    'deletes' => '1',
+                    'dialCode' => $request->dialCode,
+                    'otp' => $randotp,
+                    'ip' => $request->ip(),
+                    'deviceType' => $request->deviceType,
+                    'roll_id' => '0',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'password' => $request->password
+                ];
+
+                $tempINS =  DB::table('users_temp')->insert($arr);
+                $insertedId = DB::getPdo()->lastInsertId();
+                if ($tempINS) {
+
+                    //TODO: EMAIL and SMS Integration pending
+
+
+
+
+                    $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!',  'data' => ['tempID' =>   $insertedId]];
+                    goto returnFVI;
+                } else {
+                    $response = ['status' => 'failed', 'message' => 'Insert Failed!',  'error' => $tempINS];
+                    goto returnFVI;
+                }
             } else {
                 $response = ['status' => 'failed', 'message' => 'Validation Error!',  'error' => [$validator->errors()]];
                 goto returnFVI;
