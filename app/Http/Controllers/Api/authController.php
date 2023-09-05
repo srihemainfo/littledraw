@@ -90,10 +90,12 @@ class authController extends Controller
                 $insertedId = DB::getPdo()->lastInsertId();
                 if ($tempINS) {
 
-                    //TODO: EMAIL and SMS Integration pending
+                    //TODO: EMAIL Integration pending
+                    $subject = "Little Draw | OTP to Verify Email - " . date("d-m-Y g:i a");
+                    $message = '';
+                    $sendEmail = Controller::composeEmail($request->ip(), $request->email, $subject, $message, $frmID = '');
 
-
-
+                    dd($sendEmail);
 
                     $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!',  'data' => ['tempID' =>   $insertedId]];
                     goto returnFVI;
