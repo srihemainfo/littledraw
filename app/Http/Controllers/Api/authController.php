@@ -102,10 +102,10 @@ class authController extends Controller
                     $message = mailController::signUPotp($requestArr);
                     $sendEmail = Controller::composeEmail($request->ip(), $request->email, $subject, $message, $frmID = '');
                     if ($sendEmail) {
-                        $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!',  'data' => ['tempID' =>   $insertedId]];
+                        $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!',  'data' => ['tempID' =>   (int)$insertedId]];
                         goto returnFVI;
                     } else {
-                        $response = ['status' => 'failed', 'message' => 'Email OTP Failed!',  'error' => $tempINS];
+                        $response = ['status' => 'failed', 'message' => 'Email OTP Failed!',  'error' => $sendEmail];
                         goto returnFVI;
                     }
                 } else {
@@ -177,5 +177,58 @@ class authController extends Controller
         }
     }
 
-    
+    //  The Mobile/Email OTP Verification API 
+    public function signupOTPVerify(Request $request)
+    {
+        try {
+            $response = [];
+            $input = $request->all();
+            $validator = Validator::make($input, [
+                'tempID' => ['required'],
+                'method' => ['required', 'in:EMAIL,MOBILE', 'max:10'],
+                'OTP' => ['required', 'max:4']
+            ]);
+            if (!$validator->fails()) {
+
+                if ($request->OTP == 'EMAIL') {
+                    $bresult = DB::table('users_temp')->where('id', $request->tempID)
+                        ->where('status', 0)
+                        ->where('otp',  $request->OTP)
+                        ->where('deletes', 1)
+                        ->orderBy('id', 'DESC')
+                        ->limit(1)
+                        ->get();
+                    if ($bresult->count() > 0) {
+                        $mobile = $bresult[0]->mobile;
+                        $email_verify = DB::table('users_temp')->where('id', $request->tempID)->update(['email_verify' => 'YES']);
+                        if ($email_verify) {
+                            if (substr($mobile, 0, 3) == "971") {
+                            } else {
+                                $delete_update = DB::table('users_temp')->where('id', $request->tempID)->update(['deletes' => '0']);
+                                if ($delete_update) {
+                                    $result = $auth->userRgister($user_id, $otp, $baseurl);
+                                    goto returnFVI;
+                                }
+                            }
+                        } else {
+                            $response = ['status' => 'failed', 'message' => 'Invalid OTP!',  'error' => 'OTP Verification failed.'];
+                            goto returnFVI;
+                        }
+                    } else {
+                        $response = ['status' => 'failed', 'message' => 'Invalid OTP!',  'error' => 'OTP Verification failed.'];
+                        goto returnFVI;
+                    }
+                }
+            } else {
+                $response = ['status' => 'failed', 'message' => 'Validation Error!',  'error' => [$validator->errors()]];
+                goto returnFVI;
+            }
+
+            returnFVI:
+            return response()->json($response);
+        } catch (Exception $e) {
+            $response = ['status' => 'failed', 'message' => 'Throw in Catch Section', 'error' => ['message' => $e->getMessage(), 'code' => $e->getCode(), 'string' => $e->__toString()]];
+            return response()->json($response);
+        }
+    }
 }

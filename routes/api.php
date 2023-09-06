@@ -24,3 +24,6 @@ Route::post('register', [authController::class, 'register'])->name('register');
 
 // GetWorld First API
 Route::get('getWorld', [authController::class, 'getWorld'])->name('getWorld');
+
+// The Mobile/Email OTP Verification API 
+Route::post('signupOTPVerify', [authController::class, 'signupOTPVerify'])->name('signupOTPVerify');
