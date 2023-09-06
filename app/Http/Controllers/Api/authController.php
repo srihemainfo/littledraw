@@ -8,6 +8,7 @@ use Illuminate\Validation\Rules\Password;
 use Exception;
 use Illuminate\Http\Request;
 use DB;
+use App\Http\Controllers\Template\mailController;
 
 class authController extends Controller
 {
@@ -92,13 +93,20 @@ class authController extends Controller
 
                     //TODO: EMAIL Integration pending
                     $subject = "Little Draw | OTP to Verify Email - " . date("d-m-Y g:i a");
-                    $message = '';
+                    $requestArr = [
+                        'name' => $request->first_name,
+                        'randotp' => $randotp
+                    ];
+
+                    $message = mailController::signUPotp($requestArr);
                     $sendEmail = Controller::composeEmail($request->ip(), $request->email, $subject, $message, $frmID = '');
-
-                    dd($sendEmail);
-
-                    $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!',  'data' => ['tempID' =>   $insertedId]];
-                    goto returnFVI;
+                    if ($sendEmail) {
+                        $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!',  'data' => ['tempID' =>   $insertedId]];
+                        goto returnFVI;
+                    } else {
+                        $response = ['status' => 'failed', 'message' => 'Email OTP Failed!',  'error' => $tempINS];
+                        goto returnFVI;
+                    }
                 } else {
                     $response = ['status' => 'failed', 'message' => 'Insert Failed!',  'error' => $tempINS];
                     goto returnFVI;

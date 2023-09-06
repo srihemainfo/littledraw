@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller as BaseController;
 use Exception;
 use PHPMailer\PHPMailer\PHPMailer;
 use DB;
+use Illuminate\Support\HtmlString;
 
 class Controller extends BaseController
 {
@@ -37,55 +38,94 @@ class Controller extends BaseController
         try {
             $i = 0;
             $datetime = date("Y-m-d H:i:s");
+            $htmlString = new HtmlString($message);
             $insertlog =  DB::table('emaillog')->insert([
-                'details' => $message,
+                'details' =>  $htmlString->toHtml(),
                 'subject' => $subject,
                 'email' => $email,
                 'ip' => $user_ip,
                 'datetime' => $datetime,
                 'status' => 1,
+                'fromemail' => ''
             ]);
             $insert_id = DB::getPdo()->lastInsertId();
-
-            dd($insert_id);
-            // Email server settings
-            $mail->SMTPDebug = 0;
             $mail->isSMTP();
-            $mail->Host = 'smtp.example.com';
-            $mail->SMTPAuth = true;
-            $mail->Username = 'user@example.com';
-            $mail->Password = '**********';
-            $mail->SMTPSecure = 'tls';
-            $mail->Port = 587;
 
-            $mail->setFrom('sender@example.com', 'SenderName');
-            $mail->addAddress($request->emailRecipient);
-            $mail->addCC($request->emailCc);
-            $mail->addBCC($request->emailBcc);
+            recheckMail:
+            $fromMail = '';
+            if ($frmID != '') {
+                $conT = "`emailkey` = '$frmID' ORDER BY `id` DESC LIMIT 1";
+            } else {
+                $conT = "`emailkey` = 'all' ORDER BY `id` DESC LIMIT 1";
+            }
 
-            $mail->addReplyTo('sender@example.com', 'SenderReplyName');
 
-            if (isset($_FILES['emailAttachments'])) {
-                for ($i = 0; $i < count($_FILES['emailAttachments']['tmp_name']); $i++) {
-                    $mail->addAttachment($_FILES['emailAttachments']['tmp_name'][$i], $_FILES['emailAttachments']['name'][$i]);
+            $email_config = DB::table('email_config')->where('deletes', '0')
+                ->where('status', '0')
+                ->whereRaw($conT)->get();
+
+            if ($email_config->count() > 0) {
+
+
+                // $row = mysqli_fetch_assoc($get_Email);
+                $fromMail = $email_config[0]->setFrom;
+                $smtpAu = boolval($email_config[0]->SMTPAuth) ? true : false;
+                $mail->Host = $email_config[0]->Host;
+                $mail->SMTPAuth = $smtpAu;
+                $mail->Username = $email_config[0]->Username;
+                $mail->Password = $email_config[0]->Password;
+                $mail->SMTPSecure = $email_config[0]->SMTPSecure;
+                $mail->Port = $email_config[0]->Port;
+                $mail->setFrom($fromMail, $email_config[0]->fromname);
+                $mail->AddReplyTo($email_config[0]->AddReplyTo, 'LITTLE DRAW');
+                if ($email_config[0]->char_set != '') {
+                    $mail->CharSet = $email_config[0]->char_set;
+                }
+
+                if ($email_config[0]->Encoding != '') {
+                    $mail->Encoding = $email_config[0]->Encoding;
+                }
+            } else {
+                $frmID = '';
+                if ($i == 0) {
+                    $i++;
+                    goto recheckMail;
                 }
             }
 
+         
+            $mail->addAddress($email);
 
+            $mail->Subject = $subject;
             $mail->isHTML(true);
+            $mail->Body = $message;
 
-            $mail->Subject = $request->emailSubject;
-            $mail->Body    = $request->emailBody;
 
-            // $mail->AltBody = plain text version of email body;
+
 
             if (!$mail->send()) {
-                // return back()->with("failed", "Email not sent.")->withErrors($mail->ErrorInfo);
+                $er = json_encode($mail->ErrorInfo);
+
+                $update = DB::table('emaillog')->where('id', $insert_id)
+                    ->update([
+                        'sendstatus' => 'FAILED',
+                        'error_info' => $er,
+                        'fromemail' => $fromMail,
+                    ]);
+                // $update = mysqli_query($con, "UPDATE `emaillog` SET `sendstatus` = 'FAILED', `error_info` = '$er', `fromemail` = '$fromMail' WHERE `emaillog`.`id` = $insert_id;");
                 return false;
             } else {
-                // return back()->with("success", "Email has been sent.");
+                
+                $update = DB::table('emaillog')->where('id', $insert_id)
+                    ->update([
+                        'sendstatus' => 'SUCCESS',
+                        'fromemail' => $fromMail,
+                    ]);
+                // $update = mysqli_query($con, "UPDATE `emaillog` SET `sendstatus` = 'SUCCESS', `fromemail` = '$fromMail' WHERE `emaillog`.`id` = $insert_id;");
                 return true;
             }
+
+
         } catch (Exception $e) {
             $response = ['status' => 'failed', 'message' => 'Throw in Catch Section', 'error' => ['message' => $e->getMessage(), 'code' => $e->getCode(), 'string' => $e->__toString()]];
             return response()->json($response);
