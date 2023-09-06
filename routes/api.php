@@ -21,3 +21,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // SignUp First API
 Route::post('register', [authController::class, 'register'])->name('register');
+
+// GetWorld First API
+Route::get('getWorld', [authController::class, 'getWorld'])->name('getWorld');

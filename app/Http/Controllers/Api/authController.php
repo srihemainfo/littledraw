@@ -91,7 +91,7 @@ class authController extends Controller
                 $insertedId = DB::getPdo()->lastInsertId();
                 if ($tempINS) {
 
-                    //TODO: EMAIL Integration pending
+
                     $subject = "Little Draw | OTP to Verify Email - " . date("d-m-Y g:i a");
                     $requestArr = [
                         'name' => $request->first_name,
@@ -115,6 +115,59 @@ class authController extends Controller
                 $response = ['status' => 'failed', 'message' => 'Validation Error!',  'error' => [$validator->errors()]];
                 goto returnFVI;
             }
+
+            returnFVI:
+            return response()->json($response);
+        } catch (Exception $e) {
+            $response = ['status' => 'failed', 'message' => 'Throw in Catch Section', 'error' => ['message' => $e->getMessage(), 'code' => $e->getCode(), 'string' => $e->__toString()]];
+            return response()->json($response);
+        }
+    }
+
+
+
+    public function getWorld()
+    {
+        try {
+            $response = [];
+            $countries =  DB::table('countries')->select([
+                'countries.id as id',
+                'countries.name as name',
+                DB::raw('COUNT(states.id) as statecount')
+            ])
+                ->join('states', 'countries.id', '=', 'states.country_id')
+                ->where('countries.flag', 1)
+                ->groupBy('countries.id')
+                ->havingRaw('statecount > 0')
+                ->orderBy('name', 'ASC')
+                ->get();
+
+            $states = DB::table('states')->select([
+                'states.id as id',
+                'states.name as name',
+                'states.country_id as countryID',
+                DB::raw('COUNT(cities.id) as citycount')
+            ])
+                ->join('cities', 'states.id', '=', 'cities.state_id')
+                ->where('states.flag', 1)
+                ->groupBy('states.id')
+                ->havingRaw('citycount > 0')
+                ->orderBy('name', 'ASC')
+                ->get();
+
+            $cities = DB::table('cities')->select([
+                'id',
+                'name',
+                'country_id as countryID',
+                'country_id as countryID',
+                'state_id as stateID'
+            ])
+                ->where('flag', 1)
+                ->orderBy('name', 'ASC')
+                ->get();
+
+            $response = ['status' => 'success', 'message' => 'Country, State and City has been get successfully.',  'data' => ['countries' =>   $countries, 'states' => $states, 'cities' => $cities]];
+            goto returnFVI;
 
             returnFVI:
             return response()->json($response);
