@@ -12,6 +12,7 @@ use App\Http\Controllers\Template\mailController;
 
 class authController extends Controller
 {
+    // Register Email OTP Send
     public function register(Request $request)
     {
         try {
@@ -124,8 +125,7 @@ class authController extends Controller
         }
     }
 
-
-
+    // Get Country, City, State, collection API
     public function getWorld()
     {
         try {
@@ -176,4 +176,6 @@ class authController extends Controller
             return response()->json($response);
         }
     }
+
+    
 }
