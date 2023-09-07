@@ -29,7 +29,7 @@ class authController extends Controller
                 $getTempUser['created_at'] = date("Y-m-d H:i:s");
                 $getTempUser['IBAN_code'] = '';
                 $getTempUser['currency_code'] = '';
-                // TODO: not finished
+                // TODO: not finished ssd
                 dd($getTempUser);
 
                 $user_register_insert = DB::table('user_register')->insert($getTempUser);
