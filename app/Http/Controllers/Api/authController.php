@@ -29,7 +29,7 @@ class authController extends Controller
                 $getTempUser['created_at'] = date("Y-m-d H:i:s");
                 $getTempUser['IBAN_code'] = '';
                 $getTempUser['currency_code'] = '';
-
+                // TODO: not finished
                 dd($getTempUser);
 
                 $user_register_insert = DB::table('user_register')->insert($getTempUser);
@@ -560,6 +560,7 @@ class authController extends Controller
                         $email_verify = DB::table('users_temp')->where('id', $request->tempID)->update(['email_verify' => 'YES']);
                         if ($email_verify) {
                             if (substr($mobile, 0, 3) == "971") {
+                                // Todo: pending SMS - OTP
                             } else {
 
                                 $delete_update = DB::table('users_temp')->where('id', $request->tempID)->update(['deletes' => '0']);
