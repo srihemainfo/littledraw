@@ -373,9 +373,11 @@ class authController extends Controller
     // Register Email OTP Send
     public function register(Request $request)
     {
+
         try {
             $response = [];
             $input = $request->all();
+
             $validator = Validator::make($input, [
                 'first_name' => ['required', 'max:70'],
 
@@ -390,8 +392,10 @@ class authController extends Controller
                 'state' => ['required', 'integer'],
                 'city' => ['required', 'integer'],
             ]);
+
             if (!$validator->fails()) {
                 $pass = md5($request->password);
+
 
                 $countryName = DB::table('countries')->where('flag', 1)
                     ->where('id', $request->country)
@@ -399,6 +403,7 @@ class authController extends Controller
                     ->orderByDesc('id')->limit(1)
                     ->value('name');
 
+                    // dd($validator);
                 $stateName = DB::table('states')->where('flag', 1)
                     ->where('id', $request->state)
                     ->where('name', '!=', '')
@@ -457,6 +462,7 @@ class authController extends Controller
                     ];
 
                     $message = mailController::signUPotp($requestArr);
+                    // dd($message);
                     $sendEmail = Controller::composeEmail($request->ip(), $request->email, $subject, $message, $frmID = '');
                     if ($sendEmail) {
                         $response = ['status' => 'success', 'message' => 'Email OTP Send Successfully!', 'data' => ['tempID' => (int) $insertedId]];
